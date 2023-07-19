@@ -2,6 +2,7 @@ from wsgiref.simple_server import make_server
 import json
 from os.path import join
 import sqlite3
+from urllib.parse import parse_qs
 
 templates_path = 'templates'
 
@@ -51,9 +52,18 @@ def app(environ, start_response):
       body = environ['wsgi.input'].read(length).decode('utf-8')
       response = routes[path](body)
       start_response(*OK)
+
+    elif req == 'application/x-www-form-urlencoded':
+      length = int(environ.get('CONTENT_LENGTH', 0))
+      body = environ['wsgi.input'].read(length).decode('utf-8')
+      data = parse_qs(body)
+      response = routes[path](data)
+      start_response(*OK)
+
     else:
       response = "<h1> NOT ALLOWED </h1>"
       start_response(*NOT_ALLOWED)
+
   elif path in routes and method == 'GET':
     try:
       response, content_type, filename = routes[path]()
@@ -64,10 +74,14 @@ def app(environ, start_response):
     except:
       try:
         response, content_type = routes[path]()
-        start_response('200 OK', [('Content-Type', content_type)])
+        if content_type == 'redirect':
+          start_response('302 Found', [('Content-Type', 'text/html'), ('Location', f'{response}')])
+        else:
+          start_response('200 OK', [('Content-Type', content_type)])
       except:
         response = routes[path]()
         start_response(*OK)
+
   else:
     response = "<h1>404 NOT FOUND</h1>"
     start_response(*NOT_FOUND)
@@ -104,6 +118,11 @@ def send_json(data):
   return json.dumps(data), 'application/json'
 
 
+def get_data(info,query):
+  data = info[query][0]
+  return data
+
+
 def send_file(path):
   try:
     with open(join(files_path, path), 'rb') as f:
@@ -115,11 +134,12 @@ def send_file(path):
 
 
 def redirect(link):
-  return f"<script>window.location.href = '{link}'</script>"
+  return link, 'redirect'
 
 # Default page
 
-html = """<!DOCTYPE html>
+html = """
+<!DOCTYPE html>
 <html>
 <head>
     <title>Mango Server</title>
@@ -152,60 +172,100 @@ html = """<!DOCTYPE html>
             width: 150px;
             margin: 0 auto;
         }
+
+        .link {
+            color: orange;
+            text-decoration: underline;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
     <h1>Server successfully started, but there are no routes or the "/" route is empty</h1>
     <img class="mango-img" src="https://th.bing.com/th/id/R.54bad49b520690f3858b1f396194779d?rik=QSeITH3EbHg4Vw&pid=ImgRaw&r=0" alt="Mango">
     <footer>
-        Version: 0.5
+        Version: 0.7.6
+        <br>
+        <a class="link" href="https://pypi.org/project/mango-framework/">Check out the development!</a>
     </footer>
 </body>
-</html>"""
+</html>
+"""
 
 
 #Native User DB 
 
-conn = sqlite3.connect('databse.sqlite')
+class User:
+    def __init__(self):
+      self.conn = sqlite3.connect('DB.sqlite')
+      self.conn.execute('CREATE TABLE IF NOT EXISTS Users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, firstname TEXT, lastname TEXT, email TEXT, password TEXT)')
 
-conn.execute('CREATE TABLE IF NOT EXISTS Users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, firstname TEXT, lastname TEXT, email TEXT, password TEXT)')
-
-def user():
-    def insert(username=None, firstname=None, lastname=None, email=None, password=None):
-        conn.execute('INSERT INTO Users (username, firstname, lastname, email, password) VALUES (?,?,?,?,?)',
+    def insert(self, username=None, firstname=None, lastname=None, email=None, password=None):
+        self.conn.execute('INSERT INTO Users (username, firstname, lastname, email, password) VALUES (?,?,?,?,?)',
                      (username, firstname, lastname, email, password))
-        conn.commit()
+        self.conn.commit()
 
-    def search(search):
+    def search(self, search):
         search_term = f"%{search}%"
-        result = conn.execute('SELECT * FROM Users WHERE username LIKE ? OR firstname LIKE ? OR lastname LIKE ? OR email LIKE ? OR password LIKE ?',
+        result = self.conn.execute('SELECT * FROM Users WHERE username LIKE ? OR firstname LIKE ? OR lastname LIKE ? OR email LIKE ? OR password LIKE ?',
                               (search_term, search_term, search_term, search_term, search_term))
         return result.fetchall()
 
-    def delete(search):
+    def delete(self, search):
         search_term = f"%{search}%"
-        conn.execute('DELETE FROM Users WHERE username LIKE ? OR firstname LIKE ? OR lastname LIKE ? OR email LIKE ? OR password LIKE ?',
+        self.conn.execute('DELETE FROM Users WHERE username LIKE ? OR firstname LIKE ? OR lastname LIKE ? OR email LIKE ? OR password LIKE ?',
                      (search_term, search_term, search_term, search_term, search_term))
-        conn.commit()
+        self.conn.commit()
 
-    def get_user_by_username(username):
-        result = conn.execute('SELECT * FROM Users WHERE username = ?', (username,))
+    def get_user_by_username(self, username):
+        result = self.conn.execute('SELECT * FROM Users WHERE username = ?', (username,))
         return result.fetchone()
     
-    def get_user_by_firstname(firstname):
-        result = conn.execute('SELECT * FROM Users WHERE firstname = ?', (firstname,))
+    def get_user_by_firstname(self, firstname):
+        result = self.conn.execute('SELECT * FROM Users WHERE firstname = ?', (firstname,))
         return result.fetchone()
     
-    def get_user_by_lastname(lastname):
-        result = conn.execute('SELECT * FROM Users WHERE lastname = ?', (lastname,))
+    def get_user_by_lastname(self, lastname):
+        result = self.conn.execute('SELECT * FROM Users WHERE lastname = ?', (lastname,))
         return result.fetchone()
     
-    def get_user_by_email(email):
-        result = conn.execute('SELECT * FROM Users WHERE email = ?', (email,))
+    def get_user_by_email(self, email):
+        result = self.conn.execute('SELECT * FROM Users WHERE email = ?', (email,))
         return result.fetchone()
     
-    def get_user_by_password(password):
-        result = conn.execute('SELECT * FROM Users WHERE password = ?', (password,))
+    def get_user_by_password(self, password):
+        result = self.conn.execute('SELECT * FROM Users WHERE password = ?', (password,))
         return result.fetchone()
 
-    return insert, search, delete, get_user_by_username, get_user_by_firstname, get_user_by_lastname, get_user_by_email, get_user_by_password
+#Native template engine Shake! 
+
+class Shake:
+  def render(self,template,context=None):
+    try:
+      with open(join(templates_path, template), 'r') as f:
+        template = f.read()
+    except:
+      try:
+        with open(join(template), 'r') as f:
+          template = f.read()
+      except:
+        pass
+    if context is None:
+      context = {}
+    for key, value in context.items():
+      placeholder = f"{{{{{key}}}}}"
+      template = template.replace(placeholder, str(value))
+    
+    return template
+  
+
+
+# native Shake template engine 
+
+  #def render(template, context=None):
+ #   if context is None:
+ #       context = {}
+  #  for key, value in context.items():
+  #      placeholder = f"{{{{{key}}}}}"
+   #     template = template.replace(placeholder, str(value))
+   # return template
