@@ -4,7 +4,7 @@
 
 ## Introduction
 
-Mango is a lightweight Python framework for building web applications. It provides a simple and intuitive way to handle routing, render HTML templates, and serve files. With Mango, you can quickly set up a web server and define routes to handle different HTTP requests.
+Mango is a lightweight Python framework for building web applications. It provides a simple and intuitive way to handle routing, render HTML templates, and serve files. With Mango, you can quickly set up a web server and define routes to handle different HTTP requests. It is made to be accessible and highly modifiable even by beginners to learn and eventually move on to more mature frameworks such as Flask or Bottle. You only need python3 to run Mango and nothing else.
 
 ## Features
 
@@ -12,10 +12,12 @@ Mango is a lightweight Python framework for building web applications. It provid
 - Rendering HTML templates
 - Serving static files
 - Handling JSON data
+- Handling of basic form data
 - Lightweight and minimal dependencies
 - Suitable for small to medium-sized web applications
 - Human readible code even beginners could modify 
 - Integrated basic ORM for DB functions
+- Integrated basic Template engine Shake
 
 ## Installation
 
@@ -46,6 +48,5 @@ def greet():
 3. Run the Mango server:
 
 ```python
-if __name__ == '__main__':
-    run()
+run()
 ```
