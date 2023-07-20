@@ -184,7 +184,7 @@ html = """
     <h1>Server successfully started, but there are no routes or the "/" route is empty</h1>
     <img class="mango-img" src="https://th.bing.com/th/id/R.54bad49b520690f3858b1f396194779d?rik=QSeITH3EbHg4Vw&pid=ImgRaw&r=0" alt="Mango">
     <footer>
-        Version: 0.7.6
+        Version: 0.7.8
         <br>
         <a class="link" href="https://pypi.org/project/mango-framework/">Check out the development!</a>
     </footer>
@@ -246,7 +246,7 @@ class Shake:
         template = f.read()
     except:
       try:
-        with open(join(template), 'r') as f:
+        with open(template, 'r') as f:
           template = f.read()
       except:
         pass
