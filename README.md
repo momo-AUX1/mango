@@ -79,7 +79,7 @@ def render():
 ```python
 @route('/render')
 def shake():
-    return Shake.render('index.html',{'name':'john'})
+    return Shake().render('index.html',{'name':'john'})
 ```
 
 8. Get form data:
