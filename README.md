@@ -18,6 +18,7 @@ Mango is a lightweight Python framework for building web applications. It provid
 - Human readible code even beginners could modify 
 - Integrated basic ORM for DB functions
 - Integrated basic Template engine Shake
+- Handling of file uploads
 
 ## Installation
 
@@ -31,7 +32,7 @@ pip install mango-framework
 1. Import the necessary modules and functions from Mango:
 
 ```python
-from mango import route, run, render, send_json, send_file, Shake, get_json
+from mango import route, run, render, send_json, send_file, get_json, save_file
 ```
 2. Define your routes using the @route() decorator: 
 
@@ -66,23 +67,21 @@ def download():
     return send_file('image.jpeg')
 ```
 
-6. Render the HTML to the user:
+6. Render the HTML to the user (now supports shake without the class):
 
 ```python
 @route('/render')
 def render():
     return render('index.html')
-```
 
-7. Render the HTML to the user as a template with Shake:
+### New shake rendering
 
-```python
 @route('/render')
-def shake():
-    return Shake().render('index.html',{'name':'john'})
+def render():
+    return render('index.html',{'name':'john'})
 ```
 
-8. Get form data:
+7. Get form data:
 
 ```python
 @route('/form')
@@ -90,8 +89,16 @@ def form(form_data):
     name = get_data(form_data,'name')
     return f"Hello, {name}!"
 ```
+8. Get file upload (only takes single file uploads, with no other form data.):
 
-3. Run the Mango server:
+```python
+@route('/upload')
+def upload(file):
+    save_file(file,'article.pdf')
+    return "Saved file successfully"
+```
+
+9. Run the Mango server:
 
 ```python
 run()
