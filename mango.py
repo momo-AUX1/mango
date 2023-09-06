@@ -3,6 +3,7 @@ import json
 from os.path import join
 import sqlite3
 from urllib.parse import parse_qs
+import cgi
 
 templates_path = 'templates'
 
@@ -60,6 +61,14 @@ def app(environ, start_response):
       response = routes[path](data)
       start_response(*OK)
 
+    elif req.startswith('multipart/form-data'):
+        form = cgi.FieldStorage(fp=environ['wsgi.input'], environ=environ)
+        
+        uploaded_file = form['file'] if 'file' in form else None
+        
+        response = routes[path](uploaded_file)
+        start_response(*OK)
+
     else:
       response = "<h1> NOT ALLOWED </h1>"
       start_response(*NOT_ALLOWED)
@@ -87,6 +96,10 @@ def app(environ, start_response):
     start_response(*NOT_FOUND)
 
   try:
+    if isinstance(response, tuple):
+        response_data, content_type = response
+        if content_type == 'application/json':
+            return [response_data.encode('utf-8')]
     return [response.encode()]
   except:
     return [response]
@@ -100,14 +113,23 @@ def run(host='127.0.0.1', port=5000):
 
 # Helper functions
 
-def render(path):
-  try:
-    with open(join(templates_path, path), 'r') as f:
-      response = f.read()
-  except:
-    with open(path, 'r') as f:
-      response = f.read()
-  return response
+def render(template,context=None):
+    try:
+      with open(join(templates_path, template), 'r') as f:
+        template = f.read()
+    except:
+      try:
+        with open(template, 'r') as f:
+          template = f.read()
+      except:
+        pass
+    if context is None:
+      context = {}
+    for key, value in context.items():
+      placeholder = f"{{{{{key}}}}}"
+      template = template.replace(placeholder, str(value))
+    
+    return template
 
 
 def get_json(data):
@@ -122,6 +144,22 @@ def get_data(info,query):
   data = info[query][0]
   return data
 
+
+def save_file(data, name, path=None):
+    if isinstance(data, bytes):
+        content = data
+    elif isinstance(data, cgi.FieldStorage):
+        content = data.file.read()
+    else:
+        raise ValueError("Invalid data format. Expected bytes or FieldStorage object.")
+    
+    if path is None:
+        with open(name, 'wb') as f:
+            f.write(content)
+    elif path:
+        with open(join(path, name), 'wb') as f:
+            f.write(content)
+         
 
 def send_file(path):
   try:
@@ -184,7 +222,7 @@ html = """
     <h1>Server successfully started, but there are no routes or the "/" route is empty</h1>
     <img class="mango-img" src="https://th.bing.com/th/id/R.54bad49b520690f3858b1f396194779d?rik=QSeITH3EbHg4Vw&pid=ImgRaw&r=0" alt="Mango">
     <footer>
-        Version: 0.7.8
+        Version: 0.8.3
         <br>
         <a class="link" href="https://pypi.org/project/mango-framework/">Check out the development!</a>
     </footer>
@@ -236,36 +274,3 @@ class User:
     def get_user_by_password(self, password):
         result = self.conn.execute('SELECT * FROM Users WHERE password = ?', (password,))
         return result.fetchone()
-
-#Native template engine Shake! 
-
-class Shake:
-  def render(self,template,context=None):
-    try:
-      with open(join(templates_path, template), 'r') as f:
-        template = f.read()
-    except:
-      try:
-        with open(template, 'r') as f:
-          template = f.read()
-      except:
-        pass
-    if context is None:
-      context = {}
-    for key, value in context.items():
-      placeholder = f"{{{{{key}}}}}"
-      template = template.replace(placeholder, str(value))
-    
-    return template
-  
-
-
-# native Shake template engine 
-
-  #def render(template, context=None):
- #   if context is None:
- #       context = {}
-  #  for key, value in context.items():
-  #      placeholder = f"{{{{{key}}}}}"
-   #     template = template.replace(placeholder, str(value))
-   # return template
