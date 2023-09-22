@@ -40,6 +40,10 @@ FORBIDDEN = ('403 FORBIDDEN', [('Content-Type', 'text/html')])
 
 NOT_ALLOWED = ('405 NOT ALLOWED', [('Content-Type', 'text/html')])
 
+#Default HTTP response pages
+
+page_404 = "<h1>404 NOT FOUND</h1>"
+
 # Main application function
 
 def app(environ, start_response):
@@ -92,7 +96,7 @@ def app(environ, start_response):
         start_response(*OK)
 
   else:
-    response = "<h1>404 NOT FOUND</h1>"
+    response = page_404 
     start_response(*NOT_FOUND)
 
   try:
@@ -174,17 +178,33 @@ def send_file(path):
 def redirect(link):
   return link, 'redirect'
 
+def set_404(info):
+   global page_404
+   try:
+      with open(info, 'r') as f:
+         page_404 = f.read()
+   except:
+    page_404 = info
+
+
 # Default page
 
 html = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Mango Server</title>
+    <title>Mango</title>
     <style>
+        :root {
+            --background-color-light: white;
+            --text-color-light: orange;
+            --background-color-dark: #121212;
+            --text-color-dark: orange;
+        }
+
         body {
-            background-color: white;
-            color: orange;
+            background-color: var(--background-color-light);
+            color: var(--text-color-light);
             text-align: center;
             font-family: Arial, sans-serif;
             margin-top: 150px;
@@ -216,13 +236,24 @@ html = """
             text-decoration: underline;
             margin-top: 10px;
         }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: var(--background-color-dark);
+                color: var(--text-color-dark);
+            }
+            footer {
+                background-color: rgb(52, 52, 52);
+                color: white;
+            }
+        }
     </style>
 </head>
 <body>
     <h1>Server successfully started, but there are no routes or the "/" route is empty</h1>
     <img class="mango-img" src="https://th.bing.com/th/id/R.54bad49b520690f3858b1f396194779d?rik=QSeITH3EbHg4Vw&pid=ImgRaw&r=0" alt="Mango">
     <footer>
-        Version: 0.8.3
+        Version: 0.9.0
         <br>
         <a class="link" href="https://pypi.org/project/mango-framework/">Check out the development!</a>
     </footer>
