@@ -19,6 +19,7 @@ Mango is a lightweight Python framework for building web applications. It provid
 - Integrated basic ORM for DB functions
 - Integrated basic Template engine Shake
 - Handling of file uploads
+- Setting custom 404 error pages
 
 ## Installation
 
@@ -32,7 +33,7 @@ pip install mango-framework
 1. Import the necessary modules and functions from Mango:
 
 ```python
-from mango import route, run, render, send_json, send_file, get_json, save_file
+from mango import route, run, render, send_json, send_file, get_json, save_file, set_404
 ```
 2. Define your routes using the @route() decorator: 
 
@@ -98,11 +99,18 @@ def upload(file):
     return "Saved file successfully"
 ```
 
+9. Change the default 404 Page:
+
+```python
+set_404("<h1> not here ! </h1>")
+
+## or pass an HTML or any file directly
+
+set_404("404.html")
+```
+
 9. Run the Mango server:
 
 ```python
 run()
 ```
-
-
-
