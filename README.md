@@ -1,116 +1,307 @@
-# Mango Framework
+from wsgiref.simple_server import make_server
+import json
+from os.path import join
+import sqlite3
+from urllib.parse import parse_qs
+import cgi
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+templates_path = 'templates'
 
-## Introduction
+files_path = 'files'
 
-Mango is a lightweight Python framework for building web applications. It provides a simple and intuitive way to handle routing, render HTML templates, and serve files. With Mango, you can quickly set up a web server and define routes to handle different HTTP requests. It is made to be accessible and highly modifiable even by beginners to learn and eventually move on to more mature frameworks such as Flask or Bottle. You only need python3 to run Mango and nothing else.
+# Default route
 
-## Features
-
-- Easy routing configuration
-- Rendering HTML templates
-- Serving static files
-- Handling JSON data
-- Handling of basic form data
-- Lightweight and minimal dependencies
-- Suitable for small to medium-sized web applications
-- Human readible code even beginners could modify 
-- Integrated basic ORM for DB functions
-- Integrated basic Template engine Shake
-- Handling of file uploads
-- Setting custom 404 error pages
-
-## Installation
-
-Mango can be easily installed via pip:
-
-```shell
-pip install mango-framework
-```
-
-## Usage
-1. Import the necessary modules and functions from Mango:
-
-```python
-from mango import route, run, render, send_json, send_file, get_json, save_file, set_404
-```
-2. Define your routes using the @route() decorator: 
-
-```python
-@route('/')
 def index():
-    return "Hello, Mango!"
-```
+  return html
 
-3. Get JSON data:
 
-```python
-@route('/post')
-def post(post):
-    user = get_json(post)
-    return f"Hello, {user['name']}!"
-```
+routes = {'/': index}
 
-4. Send JSON data:
+# Decorator for route registration
 
-```python
-@route('/send')
-def send():
-    return send_json({'name':'john'})
-```
+def route(path):
 
-5. Send a file for the user to download:
+  def decorator(func):
 
-```python
-@route('/download')
-def download():
-    return send_file('image.jpeg')
-```
+    routes[path] = func
 
-6. Render the HTML to the user (now supports shake without the class):
+    return func
 
-```python
-@route('/render')
-def render():
-    return render('index.html')
+  return decorator
 
-### New shake rendering
 
-@route('/render')
-def render():
-    return render('index.html',{'name':'john'})
-```
+# HTTP Response constants
 
-7. Get form data:
+OK = ('200 OK', [('Content-type', 'text/html')])
 
-```python
-@route('/form')
-def form(form_data):
-    name = get_data(form_data,'name')
-    return f"Hello, {name}!"
-```
-8. Get file upload (only takes single file uploads, with no other form data.):
+NOT_FOUND = ('404 NOT FOUND', [('Content-Type', 'text/html')])
 
-```python
-@route('/upload')
-def upload(file):
-    save_file(file,'article.pdf')
-    return "Saved file successfully"
-```
+FORBIDDEN = ('403 FORBIDDEN', [('Content-Type', 'text/html')])
 
-9. Change the default 404 Page:
+NOT_ALLOWED = ('405 NOT ALLOWED', [('Content-Type', 'text/html')])
 
-```python
-set_404("<h1> not here ! </h1>")
+#Default HTTP response pages
 
-## or pass an HTML or any file directly
+page_404 = "<h1>404 NOT FOUND</h1>"
 
-set_404("404.html")
-```
+# Main application function
 
-9. Run the Mango server:
+def app(environ, start_response):
+  path = environ['PATH_INFO']
+  method = environ['REQUEST_METHOD']
+  req = environ['CONTENT_TYPE']
 
-```python
-run()
-```
+  if path in routes and method == 'POST':
+    if req == 'application/json':
+      length = int(environ.get('CONTENT_LENGTH', 0))
+      body = environ['wsgi.input'].read(length).decode('utf-8')
+      response = routes[path](body)
+      start_response(*OK)
+
+    elif req == 'application/x-www-form-urlencoded':
+      length = int(environ.get('CONTENT_LENGTH', 0))
+      body = environ['wsgi.input'].read(length).decode('utf-8')
+      data = parse_qs(body)
+      response = routes[path](data)
+      start_response(*OK)
+
+    elif req.startswith('multipart/form-data'):
+        form = cgi.FieldStorage(fp=environ['wsgi.input'], environ=environ)
+        
+        uploaded_file = form['file'] if 'file' in form else None
+        
+        response = routes[path](uploaded_file)
+        start_response(*OK)
+
+    else:
+      response = "<h1> NOT ALLOWED </h1>"
+      start_response(*NOT_ALLOWED)
+
+  elif path in routes and method == 'GET':
+    try:
+      response, content_type, filename = routes[path]()
+      start_response(
+        '200 OK',
+        [('Content-Type', content_type),
+         ('content-disposition', f'attachment; filename={filename}')])
+    except:
+      try:
+        response, content_type = routes[path]()
+        if content_type == 'redirect':
+          start_response('302 Found', [('Content-Type', 'text/html'), ('Location', f'{response}')])
+        else:
+          start_response('200 OK', [('Content-Type', content_type)])
+      except:
+        response = routes[path]()
+        start_response(*OK)
+
+  else:
+    response = page_404 
+    start_response(*NOT_FOUND)
+
+  try:
+    if isinstance(response, tuple):
+        response_data, content_type = response
+        if content_type == 'application/json':
+            return [response_data.encode('utf-8')]
+    return [response.encode()]
+  except:
+    return [response]
+
+# Function to run the application
+
+def run(host='127.0.0.1', port=5000):
+  server = make_server(host, port, app)
+  print(f'Running at http://{host}:{port}')
+  server.serve_forever()
+
+# Helper functions
+
+def render(template,context=None):
+    try:
+      with open(join(templates_path, template), 'r') as f:
+        template = f.read()
+    except:
+      try:
+        with open(template, 'r') as f:
+          template = f.read()
+      except:
+        pass
+    if context is None:
+      context = {}
+    for key, value in context.items():
+      placeholder = f"{{{{{key}}}}}"
+      template = template.replace(placeholder, str(value))
+    
+    return template
+
+
+def get_json(data):
+  return json.loads(data)
+
+
+def send_json(data):
+  return json.dumps(data), 'application/json'
+
+
+def get_data(info,query):
+  data = info[query][0]
+  return data
+
+
+def save_file(data, name, path=None):
+    if isinstance(data, bytes):
+        content = data
+    elif isinstance(data, cgi.FieldStorage):
+        content = data.file.read()
+    else:
+        raise ValueError("Invalid data format. Expected bytes or FieldStorage object.")
+    
+    if path is None:
+        with open(name, 'wb') as f:
+            f.write(content)
+    elif path:
+        with open(join(path, name), 'wb') as f:
+            f.write(content)
+         
+
+def send_file(path):
+  try:
+    with open(join(files_path, path), 'rb') as f:
+      response = f.read()
+  except:
+    with open(path, 'rb') as f:
+      response = f.read()
+  return response, 'application/octet-stream', path
+
+
+def redirect(link):
+  return link, 'redirect'
+
+def set_404(info="<h1>404 NOT FOUND</h1>"):
+   global page_404
+   try:
+      with open(info, 'r') as f:
+         page_404 = f.read()
+   except:
+    page_404 = info
+
+
+# Default page
+
+html = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mango</title>
+    <style>
+        :root {
+            --background-color-light: white;
+            --text-color-light: orange;
+            --background-color-dark: #121212;
+            --text-color-dark: orange;
+        }
+
+        body {
+            background-color: var(--background-color-light);
+            color: var(--text-color-light);
+            text-align: center;
+            font-family: Arial, sans-serif;
+            margin-top: 150px;
+        }
+
+        h1 {
+            font-size: 24px;
+        }
+
+        footer {
+            background-color: #f5f5f5;
+            padding: 10px;
+            position: fixed;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 12px;
+            color: #888;
+        }
+
+        .mango-img {
+            width: 150px;
+            margin: 0 auto;
+        }
+
+        .link {
+            color: orange;
+            text-decoration: underline;
+            margin-top: 10px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: var(--background-color-dark);
+                color: var(--text-color-dark);
+            }
+            footer {
+                background-color: rgb(52, 52, 52);
+                color: white;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Server successfully started, but there are no routes or the "/" route is empty</h1>
+    <img class="mango-img" src="https://th.bing.com/th/id/R.54bad49b520690f3858b1f396194779d?rik=QSeITH3EbHg4Vw&pid=ImgRaw&r=0" alt="Mango">
+    <footer>
+        Version: 0.9.0
+        <br>
+        <a class="link" href="https://pypi.org/project/mango-framework/">Check out the development!</a>
+    </footer>
+</body>
+</html>
+"""
+
+
+#Native User DB 
+
+class User:
+    def __init__(self):
+      self.conn = sqlite3.connect('DB.sqlite')
+      self.conn.execute('CREATE TABLE IF NOT EXISTS Users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, firstname TEXT, lastname TEXT, email TEXT, password TEXT)')
+
+    def insert(self, username=None, firstname=None, lastname=None, email=None, password=None):
+        self.conn.execute('INSERT INTO Users (username, firstname, lastname, email, password) VALUES (?,?,?,?,?)',
+                     (username, firstname, lastname, email, password))
+        self.conn.commit()
+
+    def search(self, search):
+        search_term = f"%{search}%"
+        result = self.conn.execute('SELECT * FROM Users WHERE username LIKE ? OR firstname LIKE ? OR lastname LIKE ? OR email LIKE ? OR password LIKE ?',
+                              (search_term, search_term, search_term, search_term, search_term))
+        return result.fetchall()
+
+    def delete(self, search):
+        search_term = f"%{search}%"
+        self.conn.execute('DELETE FROM Users WHERE username LIKE ? OR firstname LIKE ? OR lastname LIKE ? OR email LIKE ? OR password LIKE ?',
+                     (search_term, search_term, search_term, search_term, search_term))
+        self.conn.commit()
+
+    def get_user_by_username(self, username):
+        result = self.conn.execute('SELECT * FROM Users WHERE username = ?', (username,))
+        return result.fetchone()
+    
+    def get_user_by_firstname(self, firstname):
+        result = self.conn.execute('SELECT * FROM Users WHERE firstname = ?', (firstname,))
+        return result.fetchone()
+    
+    def get_user_by_lastname(self, lastname):
+        result = self.conn.execute('SELECT * FROM Users WHERE lastname = ?', (lastname,))
+        return result.fetchone()
+    
+    def get_user_by_email(self, email):
+        result = self.conn.execute('SELECT * FROM Users WHERE email = ?', (email,))
+        return result.fetchone()
+    
+    def get_user_by_password(self, password):
+        result = self.conn.execute('SELECT * FROM Users WHERE password = ?', (password,))
+        return result.fetchone()
