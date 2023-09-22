@@ -178,7 +178,7 @@ def send_file(path):
 def redirect(link):
   return link, 'redirect'
 
-def set_404(info):
+def set_404(info="<h1>404 NOT FOUND</h1>"):
    global page_404
    try:
       with open(info, 'r') as f:
