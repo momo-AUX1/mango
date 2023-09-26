@@ -141,7 +141,7 @@ def get_json(data):
 
 
 def send_json(data):
-  return json.dumps(data), 'application/json'
+     return json.dumps(data), 'application/json'
 
 
 def get_data(info,query):
@@ -155,7 +155,7 @@ def save_file(data, name, path=None):
     elif isinstance(data, cgi.FieldStorage):
         content = data.file.read()
     else:
-        raise ValueError("Invalid data format. Expected bytes or FieldStorage object.")
+        raise ValueError(f"Invalid data format. Expected bytes or FieldStorage object. got {type(data)}")
     
     if path is None:
         with open(name, 'wb') as f:
@@ -169,10 +169,14 @@ def send_file(path):
   try:
     with open(join(files_path, path), 'rb') as f:
       response = f.read()
+      return response, 'application/octet-stream', path
   except:
-    with open(path, 'rb') as f:
-      response = f.read()
-  return response, 'application/octet-stream', path
+    try:
+        with open(path, 'rb') as f:
+          response = f.read()
+        return response, 'application/octet-stream', path
+    except:
+       raise FileNotFoundError(f"File {path} not found at the specified directory.")
 
 
 def redirect(link):
@@ -184,7 +188,7 @@ def set_404(info="<h1>404 NOT FOUND</h1>"):
       with open(info, 'r') as f:
          page_404 = f.read()
    except:
-    page_404 = info
+    page_404 = str(info)
 
 
 # Default page
@@ -253,7 +257,7 @@ html = """
     <h1>Server successfully started, but there are no routes or the "/" route is empty</h1>
     <img class="mango-img" src="https://th.bing.com/th/id/R.54bad49b520690f3858b1f396194779d?rik=QSeITH3EbHg4Vw&pid=ImgRaw&r=0" alt="Mango">
     <footer>
-        Version: 0.9.0
+        Version: 0.9.5
         <br>
         <a class="link" href="https://pypi.org/project/mango-framework/">Check out the development!</a>
     </footer>
@@ -305,3 +309,35 @@ class User:
     def get_user_by_password(self, password):
         result = self.conn.execute('SELECT * FROM Users WHERE password = ?', (password,))
         return result.fetchone()
+
+
+
+
+
+#Potential static support ?
+"""
+in app :
+elif path.startswith('/static/') and method == 'GET':
+    response, content_type = serve_static_file(path[len('/static/'):])
+    start_response('200 OK', [('Content-Type', content_type)])
+
+    
+helper function :
+def serve_static_file(filename):
+    try:
+        with open(os.path.join(files_path, filename), 'rb') as f:
+            content = f.read()
+            content_type, _ = mimetypes.guess_type(filename)
+            return content, content_type
+    except FileNotFoundError:
+        return page_404.encode(), 'text/html'
+
+
+example :
+
+@route('/static/([^/]+)')
+def static_file(path):
+    return serve_static_file(path)
+
+
+"""
