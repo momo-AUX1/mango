@@ -66,6 +66,12 @@ def send():
 @route('/download')
 def download():
     return send_file('image.jpeg')
+
+### as attachment
+
+@route('/download')
+def download():
+    return send_file('image.jpeg', as_attachment=True)
 ```
 
 6. Render the HTML to the user (now supports shake without the class):
@@ -114,3 +120,4 @@ set_404("404.html")
 ```python
 run()
 ```
+
