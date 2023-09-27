@@ -10,6 +10,10 @@ templates_path = 'templates'
 
 files_path = 'files'
 
+static_path = 'static'
+
+static_url = "/static"
+
 # Default route
 
 def index():
@@ -30,7 +34,6 @@ def route(path):
 
   return decorator
 
-
 # HTTP Response constants
 
 OK = ('200 OK', [('Content-type', 'text/html')])
@@ -48,6 +51,7 @@ page_404 = "<h1>404 NOT FOUND</h1>"
 # Main application function
 
 def app(environ, start_response):
+  global response
   path = environ['PATH_INFO']
   method = environ['REQUEST_METHOD']
   req = environ['CONTENT_TYPE']
@@ -98,6 +102,24 @@ def app(environ, start_response):
       except:
         response = routes[path]()
         start_response(*OK)
+  
+  #NEW STATIC !!!!!
+  elif path not in routes and method == "GET":
+    if path.startswith(static_url):
+        try:
+            with open(join(static_path, path.split('/')[2]), 'rb') as f:
+                response = f.read()
+                mime_type, _ = mimetypes.guess_type(path)
+                start_response('200 OK', [('Content-Type', mime_type)])
+        except:
+            try:
+             with open(path.split('/')[2], 'rb') as f:
+                response = f.read()
+                mime_type, _ = mimetypes.guess_type(path)
+                start_response('200 OK', [('Content-Type', mime_type)])
+            except:
+              response = page_404
+              start_response(*NOT_FOUND)
 
   else:
     response = page_404 
@@ -202,10 +224,18 @@ def redirect(link):
 def set_404(info="<h1>404 NOT FOUND</h1>"):
    global page_404
    try:
-      with open(info, 'r') as f:
+      with open(join(templates_path, info), 'r') as f:
          page_404 = f.read()
    except:
-    page_404 = str(info)
+    try:
+       with open(info, 'r') as f:
+         page_404 = f.read()
+    except:
+      page_404 = str(info)
+
+def set_static_url(url):
+   global static_url
+   static_url = url
 
 
 # Default page
@@ -274,7 +304,7 @@ html = """
     <h1>Server successfully started, but there are no routes or the "/" route is empty</h1>
     <img class="mango-img" src="https://th.bing.com/th/id/R.54bad49b520690f3858b1f396194779d?rik=QSeITH3EbHg4Vw&pid=ImgRaw&r=0" alt="Mango">
     <footer>
-        Version: 0.9.8
+        Version: 1.0.0
         <br>
         <a class="link" href="https://pypi.org/project/mango-framework/">Check out the development!</a>
     </footer>
