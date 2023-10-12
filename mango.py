@@ -138,14 +138,14 @@ def app(environ, start_response):
 
 # Function to run the application
 
-def run(host='127.0.0.1', port=5000):
+def run(host:str = '127.0.0.1', port:int = 5000):
   server = make_server(host, port, app)
   print(f'Running at http://{host}:{port}')
   server.serve_forever()
 
 # Helper functions
 
-def render(template,context=None):
+def render(template:str, context:dict = None) -> str :
     try:
       with open(join(templates_path, template), 'r') as f:
         template = f.read()
@@ -164,20 +164,20 @@ def render(template,context=None):
     return template
 
 
-def get_json(data):
+def get_json(data:str) -> dict:
   return json.loads(data)
 
 
-def send_json(data):
+def send_json(data:str) -> dict:
      return json.dumps(data), 'application/json'
 
 
-def get_data(info,query):
+def get_data(info:str, query:dict) -> str:
   data = info[query][0]
   return data
 
 
-def save_file(data, name, path=None):
+def save_file(data:bytes, name:str, path:str = None) -> None:
     if isinstance(data, bytes):
         content = data
     elif isinstance(data, cgi.FieldStorage):
@@ -193,7 +193,7 @@ def save_file(data, name, path=None):
             f.write(content)
          
 
-def send_file(path, as_attachment=False):
+def send_file(path:str, as_attachment:str = False) -> bytes:
   if as_attachment:
     try:
       with open(join(files_path, path), 'rb') as f:
@@ -220,10 +220,10 @@ def send_file(path, as_attachment=False):
            raise FileNotFoundError(f"File {path} not found at the specified directory.")
 
 
-def redirect(link):
+def redirect(link:str) -> str:
   return link, 'redirect'
 
-def set_404(info="<h1>404 NOT FOUND</h1>"):
+def set_404(info:str ="<h1>404 NOT FOUND</h1>") -> str:
    global page_404
    try:
       with open(join(templates_path, info), 'r') as f:
@@ -235,11 +235,11 @@ def set_404(info="<h1>404 NOT FOUND</h1>"):
     except:
       page_404 = str(info)
 
-def set_static_url(url):
+def set_static_url(url:str) -> str:
    global static_url
    static_url = url
 
-def enable_static(value=None):
+def enable_static(value:bool = None):
     global static
     if isinstance(value, bool):
       static = value
@@ -249,7 +249,7 @@ def enable_static(value=None):
 
 # Default page
 
-html = """
+html : str = """
 <!DOCTYPE html>
 <html>
 <head>
@@ -313,7 +313,7 @@ html = """
     <h1>Server successfully started, but there are no routes or the "/" route is empty</h1>
     <img class="mango-img" src="https://th.bing.com/th/id/R.54bad49b520690f3858b1f396194779d?rik=QSeITH3EbHg4Vw&pid=ImgRaw&r=0" alt="Mango">
     <footer>
-        Version: 1.0.6
+        Version: 1.0.7
         <br>
         <a class="link" href="https://pypi.org/project/mango-framework/">Check out the development!</a>
     </footer>
@@ -329,42 +329,42 @@ class User:
       self.conn = sqlite3.connect('DB.sqlite')
       self.conn.execute('CREATE TABLE IF NOT EXISTS Users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, firstname TEXT, lastname TEXT, email TEXT, password TEXT)')
 
-    def insert(self, username=None, firstname=None, lastname=None, email=None, password=None):
+    def insert(self, username : str = None, firstname : str = None, lastname : str = None, email : str = None, password : str = None):
         self.conn.execute('INSERT INTO Users (username, firstname, lastname, email, password) VALUES (?,?,?,?,?)',
                      (username, firstname, lastname, email, password))
         self.conn.commit()
 
-    def search(self, search):
+    def search(self, search:str):
         search_term = f"%{search}%"
         result = self.conn.execute('SELECT * FROM Users WHERE username LIKE ? OR firstname LIKE ? OR lastname LIKE ? OR email LIKE ? OR password LIKE ?',
                               (search_term, search_term, search_term, search_term, search_term))
         return result.fetchall()
 
-    def delete(self, search):
+    def delete(self, search:str):
         search_term = f"%{search}%"
         self.conn.execute('DELETE FROM Users WHERE username LIKE ? OR firstname LIKE ? OR lastname LIKE ? OR email LIKE ? OR password LIKE ?',
                      (search_term, search_term, search_term, search_term, search_term))
         self.conn.commit()
 
-    def get_user_by_username(self, username):
+    def get_user_by_username(self, username:str):
         result = self.conn.execute('SELECT * FROM Users WHERE username = ?', (username,))
         return result.fetchone()
     
-    def get_user_by_firstname(self, firstname):
+    def get_user_by_firstname(self, firstname:str):
         result = self.conn.execute('SELECT * FROM Users WHERE firstname = ?', (firstname,))
         return result.fetchone()
     
-    def get_user_by_lastname(self, lastname):
+    def get_user_by_lastname(self, lastname:str):
         result = self.conn.execute('SELECT * FROM Users WHERE lastname = ?', (lastname,))
         return result.fetchone()
     
-    def get_user_by_email(self, email):
+    def get_user_by_email(self, email:str):
         result = self.conn.execute('SELECT * FROM Users WHERE email = ?', (email,))
         return result.fetchone()
     
-    def get_user_by_password(self, password):
+    def get_user_by_password(self, password:str):
         result = self.conn.execute('SELECT * FROM Users WHERE password = ?', (password,))
         return result.fetchone()
     
-    def raw_sql_exec(self, query):
+    def raw_sql_exec(self, query:str):
        self.conn.execute(query)
