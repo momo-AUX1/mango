@@ -34,7 +34,7 @@ pip install mango-framework
 1. Import the necessary modules and functions from Mango:
 
 ```python
-from mango import route, run, render, send_json, send_file, get_json, save_file, set_404, set_static_url
+from mango import route, run, render, send_json, send_file, get_json, save_file, set_404, set_static_url, enable_static
 ```
 2. Define your routes using the @route() decorator: 
 
@@ -82,7 +82,7 @@ def download():
 def render():
     return render('index.html')
 
-### New shake rendering
+### New reactive rendering
 
 @route('/render')
 def render():
@@ -116,21 +116,26 @@ set_404("<h1> not here ! </h1>")
 set_404("404.html")
 ```
 
-10. send static files to HTML:
+10. Send static files to HTML:
 
 ```html
 <link rel="stylesheet" type="text/css" href="/static/style.css">
 ```
 
-11. change the default Static URL
+11. Change the default Static URL
 
 ```python
 set_static_url("/images")
 ```
 Default URL is /static. the new link MUST start with / !
 
+12. Enable or disable Static serving
 
-12. Run the Mango server:
+```python
+enable_static(True)
+```
+
+13. Run the Mango server:
 
 ```python
 run()
