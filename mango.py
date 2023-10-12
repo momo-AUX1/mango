@@ -14,6 +14,8 @@ static_path = 'static'
 
 static_url = "/static"
 
+static = True
+
 # Default route
 
 def index():
@@ -102,10 +104,10 @@ def app(environ, start_response):
       except:
         response = routes[path]()
         start_response(*OK)
+
   
   #NEW STATIC !!!!!
-  elif path not in routes and method == "GET":
-    if path.startswith(static_url):
+  elif path.startswith(static_url) and method == "GET" and static:
         try:
             with open(join(static_path, path.split('/')[2]), 'rb') as f:
                 response = f.read()
@@ -237,6 +239,13 @@ def set_static_url(url):
    global static_url
    static_url = url
 
+def enable_static(value=None):
+    global static
+    if isinstance(value, bool):
+      static = value
+    else:
+       raise ValueError(f"Expected Boolean value got {type(value)}")
+
 
 # Default page
 
@@ -304,7 +313,7 @@ html = """
     <h1>Server successfully started, but there are no routes or the "/" route is empty</h1>
     <img class="mango-img" src="https://th.bing.com/th/id/R.54bad49b520690f3858b1f396194779d?rik=QSeITH3EbHg4Vw&pid=ImgRaw&r=0" alt="Mango">
     <footer>
-        Version: 1.0.0
+        Version: 1.0.6
         <br>
         <a class="link" href="https://pypi.org/project/mango-framework/">Check out the development!</a>
     </footer>
@@ -356,3 +365,6 @@ class User:
     def get_user_by_password(self, password):
         result = self.conn.execute('SELECT * FROM Users WHERE password = ?', (password,))
         return result.fetchone()
+    
+    def raw_sql_exec(self, query):
+       self.conn.execute(query)
