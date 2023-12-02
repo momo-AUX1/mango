@@ -1,7 +1,6 @@
 # Mango Framework
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-
 ![Mango Icon](https://th.bing.com/th/id/R.54bad49b520690f3858b1f396194779d?rik=QSeITH3EbHg4Vw&pid=ImgRaw&r=0)
 
 ## Introduction
@@ -96,16 +95,28 @@ def render():
 ```python
 @route('/form')
 def form(form_data):
-    name = get_data(form_data,'name')
+    name = form_data.get('name')
     return f"Hello, {name}!"
 ```
-8. Get file upload (only takes single file uploads, with no other form data.):
+8. Get file upload with data:
 
 ```python
-@route('/upload')
-def upload(file):
-    save_file(file,'article.pdf')
-    return "Saved file successfully"
+@route('/get')
+def upload(form_fields, files):
+    input1 = form_fields.get("input1")  
+    input2 = form_fields.get("input2")
+
+    file_item1 = files[0]  
+    if file_item1.filename:  
+        file_path1 = save_file(data=file_item1.file.read(), name=file_item1.filename, path='upload')
+
+    file_item2 = files[1]
+    if file_item2.filename:
+        file_path2 = save_file(data=file_item2.file.read(), name=file_item2.filename, path='upload')
+
+        #returns files in a list, forms in a dict
+
+    return "files saved successfully"
 ```
 
 9. Change the default 404 Page:
