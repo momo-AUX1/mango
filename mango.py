@@ -6,29 +6,28 @@ from urllib.parse import parse_qs
 import mimetypes
 import cgi
 
-templates_path = 'templates'
+templates_path : str = 'templates'
 
-files_path = 'files'
+files_path : str = 'files'
 
-static_path = 'static'
+static_path : str = 'static'
 
-static_url = "/static"
+static_url : str = "/static"
 
-static = True
+static : bool = True
 
 # Default route
 
 def index():
   return html
 
-
-routes = {'/': index}
+routes : dict = {'/': index}
 
 # Decorator for route registration
 
-def route(path):
+def route(path : str):
 
-  def decorator(func):
+  def decorator(func : callable):
 
     routes[path] = func
 
@@ -38,17 +37,17 @@ def route(path):
 
 # HTTP Response constants
 
-OK = ('200 OK', [('Content-type', 'text/html')])
+OK : tuple = ('200 OK', [('Content-type', 'text/html')])
 
-NOT_FOUND = ('404 NOT FOUND', [('Content-Type', 'text/html')])
+NOT_FOUND : tuple = ('404 NOT FOUND', [('Content-Type', 'text/html')])
 
-FORBIDDEN = ('403 FORBIDDEN', [('Content-Type', 'text/html')])
+FORBIDDEN : tuple = ('403 FORBIDDEN', [('Content-Type', 'text/html')])
 
-NOT_ALLOWED = ('405 NOT ALLOWED', [('Content-Type', 'text/html')])
+NOT_ALLOWED : tuple = ('405 NOT ALLOWED', [('Content-Type', 'text/html')])
 
 #Default HTTP response pages
 
-page_404 = "<h1>404 NOT FOUND</h1>"
+page_404 : str = "<h1>404 NOT FOUND</h1>"
 
 # Main application function
 
@@ -66,19 +65,31 @@ def app(environ, start_response):
       start_response(*OK)
 
     elif req == 'application/x-www-form-urlencoded':
-      length = int(environ.get('CONTENT_LENGTH', 0))
-      body = environ['wsgi.input'].read(length).decode('utf-8')
-      data = parse_qs(body)
-      response = routes[path](data)
-      start_response(*OK)
+            length = int(environ.get('CONTENT_LENGTH', 0))
+            body = environ['wsgi.input'].read(length).decode('utf-8')
+            data = parse_qs(body)
+
+            form_fields = {key: value[0] for key, value in data.items()}
+
+            response = routes[path](form_fields) 
+            start_response(*OK)
 
     elif req.startswith('multipart/form-data'):
-        form = cgi.FieldStorage(fp=environ['wsgi.input'], environ=environ)
-        
-        uploaded_file = form['file'] if 'file' in form else None
-        
-        response = routes[path](uploaded_file)
+        form = cgi.FieldStorage(fp=environ['wsgi.input'], environ=environ, keep_blank_values=True)
+        formfields = {}
+        files = []
+        for key in form:
+            if form[key].filename:  
+
+                fileitem = form[key]
+                files.append(fileitem)
+            else:
+
+                formfields[key] = form.getvalue(key)
+
+        response = routes[path](formfields, files)
         start_response(*OK)
+
 
     else:
       response = "<h1> NOT ALLOWED </h1>"
@@ -93,7 +104,10 @@ def app(environ, start_response):
           [('Content-Type', content_type),
           ('content-disposition', f'attachment; filename={filename}')])
       else:
-         start_response('200 OK', [('Content-Type', content_type)])
+         start_response(
+                '200 OK',
+                [('Content-Type', content_type),
+                ('content-disposition', f'filename={filename}')])
     except:
       try:
         response, content_type = routes[path]()
@@ -107,6 +121,7 @@ def app(environ, start_response):
 
   
   #NEW STATIC !!!!!
+
   elif path.startswith(static_url) and method == "GET" and static:
         try:
             with open(join(static_path, path.split('/')[2]), 'rb') as f:
@@ -172,11 +187,6 @@ def send_json(data:str) -> dict:
      return json.dumps(data), 'application/json'
 
 
-def get_data(info:str, query:dict) -> str:
-  data = info[query][0]
-  return data
-
-
 def save_file(data:bytes, name:str, path:str = None) -> None:
     if isinstance(data, bytes):
         content = data
@@ -211,6 +221,7 @@ def send_file(path:str, as_attachment:str = False) -> bytes:
             with open(join(files_path, path),'rb') as f:
              response = f.read()
         except:
+          
            with open(path, 'rb') as f:
               response = f.read()
         try:
@@ -253,6 +264,8 @@ html : str = """
 <!DOCTYPE html>
 <html>
 <head>
+    <link rel="icon" type="image/x-icon" href="https://th.bing.com/th/id/R.54bad49b520690f3858b1f396194779d?rik=QSeITH3EbHg4Vw&pid=ImgRaw&r=0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mango</title>
     <style>
         :root {
@@ -313,7 +326,7 @@ html : str = """
     <h1>Server successfully started, but there are no routes or the "/" route is empty</h1>
     <img class="mango-img" src="https://th.bing.com/th/id/R.54bad49b520690f3858b1f396194779d?rik=QSeITH3EbHg4Vw&pid=ImgRaw&r=0" alt="Mango">
     <footer>
-        Version: 1.0.7
+        Version: 1.1.1
         <br>
         <a class="link" href="https://pypi.org/project/mango-framework/">Check out the development!</a>
     </footer>
