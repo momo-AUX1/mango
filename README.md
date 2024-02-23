@@ -17,7 +17,6 @@ Mango is a lightweight Python framework for building web applications. It provid
 - Lightweight and minimal dependencies
 - Suitable for small to medium-sized web applications
 - Human readible code even beginners could modify 
-- Integrated basic ORM for DB functions
 - Integrated basic Template engine Shake
 - Handling of file uploads
 - Setting custom 404 error pages
@@ -153,3 +152,93 @@ enable_static(True)
 ```python
 run()
 ```
+
+
+## What's New in 1.2
+
+### Dynamic Route Configuration via JSON
+
+Mango 1.2 introduces the ability to configure routes dynamically using a JSON file. This feature significantly simplifies route management by allowing developers to define routes, handlers, and their responses in a JSON format, making your web application easily configurable and adaptable without the need to directly modify the Python code, the included ORM has been removed in favor of third party more robust alternatives such as tinyDB.
+
+#### How to Use JSON Route Configuration
+
+1. **Define Routes in JSON**: Create a `routing.json` file within your project directory. This file will contain all your route definitions in a structured format.
+   
+2. **Load Routes**: Utilize the `load_from_json` function at the start of your application to load the routes defined in the `routing.json` file.
+
+3. **Run Your Server**: With the routes dynamically loaded, start your Mango server as usual.
+
+#### JSON Configuration Example
+
+Below is an example of how to structure your `routing.json` to define various routes:
+
+```json
+{
+    "GET": {
+        "/": {
+            "handler": "index",
+            "return": {
+                "type": "template",
+                "name": "index.html",
+                "context": {
+                    "name": "test",
+                    "time": "11AM"
+                }
+            }
+        },
+        "/json": {
+            "handler": "send_json",
+            "return": {
+                "type": "json",
+                "data": {
+                    "name": "test",
+                    "time": "11AM"
+                }
+            }
+        },
+        "/redirect": {
+            "handler": "redirect_func",
+            "return": {
+                "type": "redirect",
+                "url": "/json"
+            }
+        },
+        "/plain": {
+            "handler": "send_plain",
+            "return": {
+                "type": "plain",
+                "data": "Hello World"
+            }
+        },
+        "/file": {
+            "handler": "send_file_func",
+            "return": {
+                "type": "file",
+                "path": "a.jpg",
+                "attachment": false
+            }
+        },
+        "/data": {
+            "handler": "send_data",
+            "return": {
+                "type": "data",
+                "data": "Hello World"
+            }
+        }
+    }
+}
+```
+
+##### Loading and Running with JSON Routes 
+
+To dynamically load the routes from your `routing.json` and start the server, include the following code in your application:
+
+```python
+data = open("routing.json").read()
+json_data_routing = json.loads(data)
+load_from_json(json_data_routing)
+run()
+``` 
+
+This enhancement to Mango makes setting up and modifying your server simpler than ever before, promoting rapid development and easier management of web applications through external JSON configurations.
+
