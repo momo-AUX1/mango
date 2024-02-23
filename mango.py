@@ -179,11 +179,11 @@ def render(template:str, context:dict = None) -> str :
     return template
 
 
-def get_json(data:str) -> dict:
+def get_json(data:dict) -> dict:
   return json.loads(data)
 
 
-def send_json(data:str) -> dict:
+def send_json(data:dict) -> dict:
      return json.dumps(data), 'application/json'
 
 
@@ -221,7 +221,6 @@ def send_file(path:str, as_attachment:str = False) -> bytes:
             with open(join(files_path, path),'rb') as f:
              response = f.read()
         except:
-          
            with open(path, 'rb') as f:
               response = f.read()
         try:
@@ -256,6 +255,45 @@ def enable_static(value:bool = None):
       static = value
     else:
        raise ValueError(f"Expected Boolean value got {type(value)}")
+    
+def load_from_json(json_data:dict):
+    print("Starting to load routes from JSON data...")
+
+    for method, paths in json_data.items():
+        for path, config in paths.items():
+            handler_return = config['return']
+            handler_type = handler_return['type']
+
+            def make_route_handler(handler_type, handler_return):
+                def route_handler(*args, **kwargs):
+                    print(f"Handling route: {path} with method: {method} using handler type: {handler_type}")
+                    if handler_type == 'template':
+                        return render(handler_return['name'], handler_return.get('context', {}))
+                    elif handler_type == 'json':
+                        return send_json(handler_return['data'])
+                    elif handler_type == 'redirect':
+                        return redirect(handler_return['url'])
+                    elif handler_type == 'plain':
+                        return handler_return['data'], 'text/plain'
+                    elif handler_type == 'data':
+                        return handler_return['data']
+                    elif handler_type == 'file':
+                        return send_file(handler_return['path'], as_attachment=handler_return.get('attachment', False))
+                    else:
+                        print(f"Unknown handler type: {handler_type}")
+                return route_handler
+
+            new_handler = make_route_handler(handler_type, handler_return)
+            route(path)(new_handler)
+            print(f"Registered new route: {path} with dynamic handler for {handler_type}")
+
+    print("Finished loading routes from JSON. Current routes dictionary:")
+    for route_path, func in routes.items():
+        print(f"Path: {route_path}, Handler Function: {func.__name__ if hasattr(func, '__name__') else 'Anonymous Function'}")
+
+
+
+
 
 
 # Default page
@@ -326,58 +364,10 @@ html : str = """
     <h1>Server successfully started, but there are no routes or the "/" route is empty</h1>
     <img class="mango-img" src="https://th.bing.com/th/id/R.54bad49b520690f3858b1f396194779d?rik=QSeITH3EbHg4Vw&pid=ImgRaw&r=0" alt="Mango">
     <footer>
-        Version: 1.1.1
+        Version: 1.2
         <br>
         <a class="link" href="https://pypi.org/project/mango-framework/">Check out the development!</a>
     </footer>
 </body>
 </html>
 """
-
-
-#Native User DB 
-
-class User:
-    def __init__(self):
-      self.conn = sqlite3.connect('DB.sqlite')
-      self.conn.execute('CREATE TABLE IF NOT EXISTS Users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, firstname TEXT, lastname TEXT, email TEXT, password TEXT)')
-
-    def insert(self, username : str = None, firstname : str = None, lastname : str = None, email : str = None, password : str = None):
-        self.conn.execute('INSERT INTO Users (username, firstname, lastname, email, password) VALUES (?,?,?,?,?)',
-                     (username, firstname, lastname, email, password))
-        self.conn.commit()
-
-    def search(self, search:str):
-        search_term = f"%{search}%"
-        result = self.conn.execute('SELECT * FROM Users WHERE username LIKE ? OR firstname LIKE ? OR lastname LIKE ? OR email LIKE ? OR password LIKE ?',
-                              (search_term, search_term, search_term, search_term, search_term))
-        return result.fetchall()
-
-    def delete(self, search:str):
-        search_term = f"%{search}%"
-        self.conn.execute('DELETE FROM Users WHERE username LIKE ? OR firstname LIKE ? OR lastname LIKE ? OR email LIKE ? OR password LIKE ?',
-                     (search_term, search_term, search_term, search_term, search_term))
-        self.conn.commit()
-
-    def get_user_by_username(self, username:str):
-        result = self.conn.execute('SELECT * FROM Users WHERE username = ?', (username,))
-        return result.fetchone()
-    
-    def get_user_by_firstname(self, firstname:str):
-        result = self.conn.execute('SELECT * FROM Users WHERE firstname = ?', (firstname,))
-        return result.fetchone()
-    
-    def get_user_by_lastname(self, lastname:str):
-        result = self.conn.execute('SELECT * FROM Users WHERE lastname = ?', (lastname,))
-        return result.fetchone()
-    
-    def get_user_by_email(self, email:str):
-        result = self.conn.execute('SELECT * FROM Users WHERE email = ?', (email,))
-        return result.fetchone()
-    
-    def get_user_by_password(self, password:str):
-        result = self.conn.execute('SELECT * FROM Users WHERE password = ?', (password,))
-        return result.fetchone()
-    
-    def raw_sql_exec(self, query:str):
-       self.conn.execute(query)
