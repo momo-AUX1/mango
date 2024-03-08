@@ -1,7 +1,6 @@
 from wsgiref.simple_server import make_server
 import json
 from os.path import join
-import sqlite3
 from urllib.parse import parse_qs
 import mimetypes
 import cgi
@@ -15,6 +14,12 @@ static_path : str = 'static'
 static_url : str = "/static"
 
 static : bool = True
+
+static_permissive : bool = False
+
+__version__ : str = '1.3.1'
+
+__app_url__ : str = 'https://pypi.org/project/mango-framework/'
 
 # Default route
 
@@ -49,6 +54,8 @@ NOT_ALLOWED : tuple = ('405 NOT ALLOWED', [('Content-Type', 'text/html')])
 
 page_404 : str = "<h1>404 NOT FOUND</h1>"
 
+page_405 : str = "<h1>405 NOT ALLOWED</h1>"
+
 # Main application function
 
 def app(environ, start_response):
@@ -56,6 +63,13 @@ def app(environ, start_response):
   path = environ['PATH_INFO']
   method = environ['REQUEST_METHOD']
   req = environ['CONTENT_TYPE']
+  query_string = environ.get('QUERY_STRING', '')
+  
+  if '=' in query_string:
+    get_params = parse_qs(query_string)
+  else:
+    get_params = {}
+
 
   if path in routes and method == 'POST':
     if req == 'application/json':
@@ -92,7 +106,7 @@ def app(environ, start_response):
 
 
     else:
-      response = "<h1> NOT ALLOWED </h1>"
+      response = page_405
       start_response(*NOT_ALLOWED)
 
   elif path in routes and method == 'GET':
@@ -129,14 +143,18 @@ def app(environ, start_response):
                 mime_type, _ = mimetypes.guess_type(path)
                 start_response('200 OK', [('Content-Type', mime_type)])
         except:
-            try:
-             with open(path.split('/')[2], 'rb') as f:
-                response = f.read()
-                mime_type, _ = mimetypes.guess_type(path)
-                start_response('200 OK', [('Content-Type', mime_type)])
-            except:
-              response = page_404
-              start_response(*NOT_FOUND)
+              if static_permissive:
+                try:
+                  with open(path.split('/')[2], 'rb') as f:
+                    response = f.read()
+                    mime_type, _ = mimetypes.guess_type(path)
+                    start_response('200 OK', [('Content-Type', mime_type)])
+                except:
+                  response = page_404
+                  start_response(*NOT_FOUND)
+              else:
+                response = page_404
+                start_response(*NOT_FOUND)
 
   else:
     response = page_404 
@@ -153,7 +171,8 @@ def app(environ, start_response):
 
 # Function to run the application
 
-def run(host:str = '127.0.0.1', port:int = 5000):
+def run(host:str = '127.0.0.1', port:int = 5000) -> None:
+  "Function to run the application. expects host in string format and port in integer format."
   server = make_server(host, port, app)
   print(f'Running at http://{host}:{port}')
   server.serve_forever()
@@ -161,6 +180,7 @@ def run(host:str = '127.0.0.1', port:int = 5000):
 # Helper functions
 
 def render(template:str, context:dict = None) -> str :
+    "Function to render a template. Expects template name and context as dictionary. Returns a string."
     try:
       with open(join(templates_path, template), 'r') as f:
         template = f.read()
@@ -180,14 +200,17 @@ def render(template:str, context:dict = None) -> str :
 
 
 def get_json(data:dict) -> dict:
+  "Function to get JSON data. Expects a dictionary. Returns a python dictionary."
   return json.loads(data)
 
 
 def send_json(data:dict) -> dict:
+     "Function to send JSON data. Expects a dictionary. Returns a dictionary to the user."
      return json.dumps(data), 'application/json'
 
 
 def save_file(data:bytes, name:str, path:str = None) -> None:
+    "Function to save a file. Expects data in bytes, name in string format and path in string format. Returns None."
     if isinstance(data, bytes):
         content = data
     elif isinstance(data, cgi.FieldStorage):
@@ -203,7 +226,8 @@ def save_file(data:bytes, name:str, path:str = None) -> None:
             f.write(content)
          
 
-def send_file(path:str, as_attachment:str = False) -> bytes:
+def send_file(path:str, as_attachment:str = False) -> tuple:
+  "Function to send a file. Expects path in string format and as_attachment in boolean format. Returns a tuple."
   if as_attachment:
     try:
       with open(join(files_path, path), 'rb') as f:
@@ -230,10 +254,12 @@ def send_file(path:str, as_attachment:str = False) -> bytes:
            raise FileNotFoundError(f"File {path} not found at the specified directory.")
 
 
-def redirect(link:str) -> str:
+def redirect(link:str) -> tuple:
+  "Function to redirect to a link. Expects a link in string format. Returns a tuple."
   return link, 'redirect'
 
-def set_404(info:str ="<h1>404 NOT FOUND</h1>") -> str:
+def set_404(info:str = "<h1>404 NOT FOUND</h1>") -> None:
+   "Function to set a custom 404 page. Expects a string. Returns None."
    global page_404
    try:
       with open(join(templates_path, info), 'r') as f:
@@ -245,11 +271,39 @@ def set_404(info:str ="<h1>404 NOT FOUND</h1>") -> str:
     except:
       page_404 = str(info)
 
-def set_static_url(url:str) -> str:
+def set_405(info:str = "<h1>405 NOT ALLOWED</h1>") -> None:
+   "Function to set a custom 405 page. Expects a string. Returns None."
+   global page_405
+   try:
+      with open(join(templates_path, info), 'r') as f:
+         page_405 = f.read()
+   except:
+    try:
+       with open(info, 'r') as f:
+         page_405 = f.read()
+    except:
+      page_405 = str(info)
+
+def set_static_url(url:str) -> None:
+   "Function to set the static url. Expects a string. Returns a None."
    global static_url
    static_url = url
 
-def enable_static(value:bool = None):
+def set_static_folder(path:str) -> None:
+    "Function to set the static folder. Expects a string. Returns a None."
+    global static_path
+    static_path = path
+
+def set_static_permissive(value:bool = None) -> None:
+    "Function to set the static permissive. Expects a boolean. Returns a None."
+    global static_permissive
+    if isinstance(value, bool):
+      static_permissive = value
+    else:
+       raise ValueError(f"Expected Boolean value got {type(value)}")
+
+def enable_static(value:bool = None) -> None:
+    "Function to enable static. Expects a boolean. Returns a None."
     global static
     if isinstance(value, bool):
       static = value
@@ -257,6 +311,7 @@ def enable_static(value:bool = None):
        raise ValueError(f"Expected Boolean value got {type(value)}")
     
 def load_from_json(json_data:dict):
+    "Function to load routes from JSON data. Expects a dictionary. Returns multiple routes."
     print("Starting to load routes from JSON data...")
 
     for method, paths in json_data.items():
@@ -298,7 +353,7 @@ def load_from_json(json_data:dict):
 
 # Default page
 
-html : str = """
+html : str = f"""
 <!DOCTYPE html>
 <html>
 <head>
@@ -306,26 +361,26 @@ html : str = """
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mango</title>
     <style>
-        :root {
+        :root {{
             --background-color-light: white;
             --text-color-light: orange;
             --background-color-dark: #121212;
             --text-color-dark: orange;
-        }
+        }}
 
-        body {
+        body {{
             background-color: var(--background-color-light);
             color: var(--text-color-light);
             text-align: center;
             font-family: Arial, sans-serif;
             margin-top: 150px;
-        }
+        }}
 
-        h1 {
+        h1 {{
             font-size: 24px;
-        }
+        }}
 
-        footer {
+        footer {{
             background-color: #f5f5f5;
             padding: 10px;
             position: fixed;
@@ -335,38 +390,38 @@ html : str = """
             text-align: center;
             font-size: 12px;
             color: #888;
-        }
+        }}
 
-        .mango-img {
+        .mango-img {{
             width: 150px;
             margin: 0 auto;
-        }
+        }}
 
-        .link {
+        .link {{
             color: orange;
             text-decoration: underline;
             margin-top: 10px;
-        }
+        }}
 
-        @media (prefers-color-scheme: dark) {
-            body {
+        @media (prefers-color-scheme: dark) {{
+            body {{
                 background-color: var(--background-color-dark);
                 color: var(--text-color-dark);
-            }
-            footer {
+            }}
+            footer {{
                 background-color: rgb(52, 52, 52);
                 color: white;
-            }
-        }
+            }}
+        }}
     </style>
 </head>
 <body>
     <h1>Server successfully started, but there are no routes or the "/" route is empty</h1>
     <img class="mango-img" src="https://th.bing.com/th/id/R.54bad49b520690f3858b1f396194779d?rik=QSeITH3EbHg4Vw&pid=ImgRaw&r=0" alt="Mango">
     <footer>
-        Version: 1.3
+        Version: {__version__}
         <br>
-        <a class="link" href="https://pypi.org/project/mango-framework/">Check out the development!</a>
+        <a class="link" href="{__app_url__}">Check out the development!</a>
     </footer>
 </body>
 </html>
