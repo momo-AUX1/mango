@@ -34,7 +34,7 @@ pip install mango-framework
 1. Import the necessary modules and functions from Mango:
 
 ```python
-from mango import route, run, render, send_json, send_file, get_json, save_file, set_404, set_static_url, enable_static
+from mango import route, run, render, send_json, send_file, get_json, save_file, set_404, set_static_url, enable_static, set_static_folder, set_static_permissive, load_from_json
 ```
 2. Define your routes using the @route() decorator: 
 
@@ -144,10 +144,24 @@ Default URL is /static. the new link MUST start with / !
 12. Enable or disable Static serving
 
 ```python
-enable_static(True)
+enable_static(True) # or False to disable
 ```
 
-13. Run the Mango server:
+13. Set the static folder
+
+```python
+set_static_folder("static")
+```
+
+14. Set the static folder to be permissive
+
+```python
+set_static_permissive(True) # or False to disable
+```
+
+Defaults to False, it is used if you want the static handler to be permissive, meaning it will serve any file in the project root without checking if the file is in the static directory or not. Ideal if you want mango to act as a file server or CDN.
+
+14. Run the Mango server:
 
 ```python
 run()
@@ -242,3 +256,18 @@ run()
 
 This enhancement to Mango makes setting up and modifying your server simpler than ever before, promoting rapid development and easier management of web applications through external JSON configurations.
 
+## Recommended Resources
+
+### TinyDB 
+
+[![TinyDB](https://img.shields.io/badge/TinyDB-lightweight-brightgreen)](https://tinydb.readthedocs.io/en/latest/)
+
+TinyDB is a lightweight, document-oriented database that is perfect for small projects or to be used as a temporary storage. It is written in pure Python and has no external dependencies. The database is stored in a single file, making it easy to manage and share. TinyDB is simple to use and easy to learn, making it an ideal choice for beginners and small projects and its goals closely align with Mango.
+
+
+
+### PicoCSS
+
+[![PicoCSS](https://img.shields.io/badge/pico-css-brightgreen)](https://picocss.com/)
+
+PicoCSS is a minimal CSS framework that provides a simple and lightweight way to style your web applications. It is designed to be easy to use and highly customizable, making it a great choice for small to medium-sized projects. PicoCSS is built with simplicity in mind, allowing you to quickly add styles to your web pages without the need for complex or bloated CSS frameworks. It is a perfect match for Mango, as both are designed to be lightweight and easy to use, making them a great combination for building web applications.
