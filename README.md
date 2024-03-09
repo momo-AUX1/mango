@@ -34,7 +34,7 @@ pip install mango-framework
 1. Import the necessary modules and functions from Mango:
 
 ```python
-from mango import route, run, render, send_json, send_file, get_json, save_file, set_404, set_static_url, enable_static, set_static_folder, set_static_permissive, load_from_json
+from mango import route, run, render, send_json, send_file, get_json, save_file, set_404, set_static_url, enable_static, set_static_folder, set_static_permissive, load_from_json, set_routes
 ```
 2. Define your routes using the @route() decorator: 
 
@@ -75,7 +75,7 @@ def download():
     return send_file('image.jpeg', as_attachment=True)
 ```
 
-6. Render the HTML to the user (now supports shake without the class):
+6. Render the HTML to the user:
 
 ```python
 @route('/render')
@@ -159,9 +159,30 @@ set_static_folder("static")
 set_static_permissive(True) # or False to disable
 ```
 
-Defaults to False, it is used if you want the static handler to be permissive, meaning it will serve any file in the project root without checking if the file is in the static directory or not. Ideal if you want mango to act as a file server or CDN.
+Defaults to `False`, it is used if you want the static handler to be permissive, meaning it will serve any file in the project root without checking if the file is in the static directory or not. Ideal if you want mango to act as a file server or CDN.
 
-14. Run the Mango server:
+15. Set the routes manually
+
+```python
+
+def index():
+    return "Hello, Mango!"
+
+def post(data):
+    user = get_json(data)
+    return f"Hello, {user['name']}!"
+
+paths = {
+    '/' : index,
+    '/post' : post
+}
+
+set_routes(paths)
+```
+
+Seperate the routes to introduce a seperation of concerns similar to django and make mango more scalable.
+
+16. Run the Mango server:
 
 ```python
 run()
