@@ -17,7 +17,7 @@ static : bool = True
 
 static_permissive : bool = False
 
-__version__ : str = '1.3.1'
+__version__ : str = '1.3.3'
 
 __app_url__ : str = 'https://pypi.org/project/mango-framework/'
 
@@ -103,7 +103,6 @@ def app(environ, start_response):
 
         response = routes[path](formfields, files)
         start_response(*OK)
-
 
     else:
       response = page_405
@@ -293,6 +292,11 @@ def set_static_folder(path:str) -> None:
     "Function to set the static folder. Expects a string. Returns a None."
     global static_path
     static_path = path
+
+def set_routes(paths:dict) -> None:
+    "Function to set the routes manually. Expects a dictionary. Returns a None. Useful if you want to do it more akin to django's seperation of concerns."
+    global routes
+    routes = paths
 
 def set_static_permissive(value:bool = None) -> None:
     "Function to set the static permissive. Expects a boolean. Returns a None."
