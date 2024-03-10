@@ -17,10 +17,9 @@ Mango is a lightweight Python framework for building web applications. It provid
 - Lightweight and minimal dependencies
 - Suitable for small to medium-sized web applications
 - Human readible code even beginners could modify 
-- Integrated basic Template engine Shake
 - Handling of file uploads
-- Setting custom 404 error pages
 - Handling static files
+- Dynamic route configuration via JSON
 
 ## Installation
 
@@ -34,7 +33,7 @@ pip install mango-framework
 1. Import the necessary modules and functions from Mango:
 
 ```python
-from mango import route, run, render, send_json, send_file, get_json, save_file, set_404, set_static_url, enable_static, set_static_folder, set_static_permissive, load_from_json, set_routes
+from mango import route, run, render, send_json, send_file, get_json, save_file, set_404, set_405, set_static_url, enable_static, set_static_folder, set_static_permissive, load_from_json, set_routes, set_500
 ```
 2. Define your routes using the @route() decorator: 
 
@@ -128,32 +127,56 @@ set_404("<h1> not here ! </h1>")
 set_404("404.html")
 ```
 
-10. Send static files to HTML:
+The page that will be shown if `debug_mode` is set to `False` and a path is not found, otherwise it will show the included 404 page.
+
+10. Change the default 405 Page:
+
+```python
+set_405("<h1> Method not allowed ! </h1>")
+
+## or pass an HTML or any file directly
+
+set_405("405.html")
+```
+
+11. Change the default 500 Page:
+
+```python
+set_500("<h1> Internal Server Error ! </h1>")
+
+## or pass an HTML or any file directly
+
+set_500("500.html")
+```
+
+The page that will be shown if `debug_mode` is set to `False` and an error occurred, otherwise it will show the included 500 page.
+
+12. Send static files to HTML:
 
 ```html
 <link rel="stylesheet" type="text/css" href="/static/style.css">
 ```
 
-11. Change the default Static URL
+13. Change the default Static URL
 
 ```python
 set_static_url("/images")
 ```
 Default URL is /static. the new link MUST start with / !
 
-12. Enable or disable Static serving
+14. Enable or disable Static serving
 
 ```python
 enable_static(True) # or False to disable
 ```
 
-13. Set the static folder
+15. Set the static folder
 
 ```python
 set_static_folder("static")
 ```
 
-14. Set the static folder to be permissive
+16. Set the static folder to be permissive
 
 ```python
 set_static_permissive(True) # or False to disable
@@ -161,7 +184,7 @@ set_static_permissive(True) # or False to disable
 
 Defaults to `False`, it is used if you want the static handler to be permissive, meaning it will serve any file in the project root without checking if the file is in the static directory or not. Ideal if you want mango to act as a file server or CDN.
 
-15. Set the routes manually
+17. Set the routes manually
 
 ```python
 
@@ -182,10 +205,10 @@ set_routes(paths)
 
 Seperate the routes to introduce a seperation of concerns similar to django and make mango more scalable.
 
-16. Run the Mango server:
+18. Run the Mango server:
 
 ```python
-run()
+run(host='localhost', port=8080, debug_mode=True)
 ```
 
 
