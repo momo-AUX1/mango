@@ -4,7 +4,12 @@ from os.path import join
 from urllib.parse import parse_qs
 import mimetypes
 import cgi
-import asyncio # coming soon for a performance gain 
+
+try:
+   from jinja2 import Environment, FileSystemLoader, select_autoescape, TemplateNotFound
+   __jinja2__ = True
+except:
+    pass
 
 templates_path : str = 'templates'
 
@@ -22,9 +27,12 @@ debug : bool = False
 
 debug_info : str = ""
 
-__version__ : str = '1.4.2'
+__version__ : str = '1.4.5'
 
 __app_url__ : str = 'https://pypi.org/project/mango-framework/'
+
+if __jinja2__:
+    env = Environment(loader=FileSystemLoader(templates_path), autoescape=select_autoescape(['html', 'xml']))
 
 # Default route
 
@@ -74,6 +82,7 @@ ESC = "\x1b["  # ANSI escape code
 YELLOW_TEXT = ESC + "33;1m"  # Bright Yellow
 BLUE_TEXT = ESC + "34;1m"  # Bright Blue
 RED_TEXT = ESC + "35;1m" # Bright Red
+GREEN_TEXT = ESC + "32;1m" # Bright Green
 RESET = ESC + "0m"  # Reset to default color
 
 
@@ -210,6 +219,8 @@ def run(host:str = '127.0.0.1', port:int = 5000, debug_mode=False) -> None:
   debug = debug_mode
   server = make_server(host, port, app)
   print(f"{YELLOW_TEXT}This is a development server. Do not use it in a production deployment.{RESET}")
+  if __jinja2__:
+    print(f"{GREEN_TEXT}Jinja2 is installed. The app will use it to render templates.{RESET}")
   if debug:
     print(f"{BLUE_TEXT}Debug mode is on. The server will show debug info when a 404 or 500 errors occurs.{RESET}")
   print(f'Running at http://{host}:{port}')
@@ -218,7 +229,14 @@ def run(host:str = '127.0.0.1', port:int = 5000, debug_mode=False) -> None:
 # Helper functions
 
 def render(template:str, context:dict = None) -> str :
-    "Function to render a template. Expects template name and context as dictionary. Returns a string."
+    "Function to render a template. Expects template name and context as dictionary. Returns a string. If jinja2 is not found it will only handle simple contexts otherwise it will handle jinja2 templates."
+    if __jinja2__:
+        try:
+            template = env.get_template(template)
+            return template.render(context)
+        except TemplateNotFound:
+            template = env.from_string(template)
+            return template.render(context)
     try:
       with open(join(templates_path, template), 'r') as f:
         template = f.read()
@@ -351,6 +369,11 @@ def set_static_folder(path:str) -> None:
     "Function to set the static folder. Expects a string. Returns a None."
     global static_path
     static_path = path
+
+def set_templates_folder(path:str) -> None:
+    "Function to set the templates folder. Expects a string. Returns a None. Useful if jinja2 is installed to tell it where to find the template otherwise it isn't needed."
+    global templates_path
+    templates_path = path
 
 def set_routes(paths:dict) -> None:
     "Function to set the routes manually. Expects a dictionary. Returns a None. Useful if you want to do it more akin to django's seperation of concerns."
