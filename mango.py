@@ -1,9 +1,13 @@
+import threading
 from wsgiref.simple_server import make_server
 import json
 from os.path import join
 from urllib.parse import parse_qs
 import mimetypes
 import cgi
+import os
+import sys
+import time
 
 try:
    from jinja2 import Environment, FileSystemLoader, select_autoescape, TemplateNotFound
@@ -27,7 +31,7 @@ debug : bool = False
 
 debug_info : str = ""
 
-__version__ : str = '1.4.5'
+__version__ : str = '1.5.0'
 
 __app_url__ : str = 'https://pypi.org/project/mango-framework/'
 
@@ -99,6 +103,7 @@ def app(environ, start_response):
     if '=' in query_string:
       get_params_unsanitzed = parse_qs(query_string)
       get_params = {k: v[0] if len(v) == 1 else v for k, v in get_params_unsanitzed.items()}
+      print("get_params", get_params)
     else:
       get_params = {}
 
@@ -219,10 +224,15 @@ def run(host:str = '127.0.0.1', port:int = 5000, debug_mode=False) -> None:
   debug = debug_mode
   server = make_server(host, port, app)
   print(f"{YELLOW_TEXT}This is a development server. Do not use it in a production deployment.{RESET}")
+
   if __jinja2__:
     print(f"{GREEN_TEXT}Jinja2 is installed. The app will use it to render templates.{RESET}")
+
   if debug:
     print(f"{BLUE_TEXT}Debug mode is on. The server will show debug info when a 404 or 500 errors occurs.{RESET}")
+    monitor_thread = threading.Thread(target=monitor_changes, args=('.',), daemon=True)
+    monitor_thread.start()
+
   print(f'Running at http://{host}:{port}')
   server.serve_forever()
 
@@ -432,6 +442,25 @@ def load_from_json(json_data:dict):
     for route_path, func in routes.items():
         print(f"Path: {route_path}, Handler Function: {func.__name__ if hasattr(func, '__name__') else 'Anonymous Function'}")
 
+
+def monitor_changes(directory: str, interval: int=1) -> None:
+    """Monitor the directory for changes and restart the server if a change is detected. Returns None."""
+    mtimes = {}
+    while True:
+        for root, _, files in os.walk(directory):
+            for filename in files:
+                if filename.endswith('.py'):
+                    filepath = os.path.join(root, filename)
+                    try:
+                        mtime = os.path.getmtime(filepath)
+                        if filepath not in mtimes:
+                            mtimes[filepath] = mtime
+                        elif mtime != mtimes[filepath]:
+                            print(f"{YELLOW_TEXT}Detected change in {filepath}. Reloading...{RESET}")
+                            os.execv(sys.executable, ['python'] + sys.argv)
+                    except FileNotFoundError:
+                        pass
+        time.sleep(interval)
 
 
 
