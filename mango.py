@@ -31,7 +31,7 @@ debug : bool = False
 
 debug_info : str = ""
 
-__version__ : str = '1.5.0'
+__version__ : str = '1.5.2'
 
 __app_url__ : str = 'https://pypi.org/project/mango-framework/'
 
@@ -243,10 +243,10 @@ def render(template:str, context:dict = None) -> str :
     if __jinja2__:
         try:
             template = env.get_template(template)
-            return template.render(context)
+            return template.render(context if context is not None else "")
         except TemplateNotFound:
             template = env.from_string(template)
-            return template.render(context)
+            return template.render(context if context is not None else "")
     try:
       with open(join(templates_path, template), 'r') as f:
         template = f.read()
@@ -261,6 +261,20 @@ def render(template:str, context:dict = None) -> str :
     for key, value in context.items():
       placeholder = f"{{{{{key}}}}}"
       template = template.replace(placeholder, str(value))
+
+    if '{% extends' in template:
+        parent_template_name = template.split('{% extends')[1].split('%}')[0].strip().strip('"').strip("'")
+        print(f"{RED_TEXT}Error:  Template inheritance, loops and conditionals are not supported YET. You may use them currently if you have Jinja2 installed.{RESET}")
+
+        try:
+            with open(join(templates_path, parent_template_name), 'r') as f:
+                parent_template = f.read()
+        except:
+            try:
+                with open(parent_template_name, 'r') as f:
+                    parent_template = f.read()
+            except:
+                parent_template = ""
     
     return template
 
